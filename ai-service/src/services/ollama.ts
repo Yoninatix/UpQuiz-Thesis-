@@ -20,8 +20,8 @@ export async function generate(options: GenerateOptions): Promise<string> {
       stream: false,
       options: {
         temperature: options.temperature ?? 0.3,
-        num_predict: options.maxTokens ?? 2048,
-        num_ctx: 4096,
+        num_predict: options.maxTokens ?? 512,
+        num_ctx: 8192,
       },
     },
     { timeout: 300_000 }, // 5-minute timeout for CPU-only LLM

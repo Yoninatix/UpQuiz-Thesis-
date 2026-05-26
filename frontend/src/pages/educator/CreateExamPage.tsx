@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Layout from '../../components/Layout';
@@ -33,6 +33,7 @@ const diffColors: Record<string, string> = {
 export default function CreateExamPage() {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { register, handleSubmit, watch } = useForm<FormData>({ defaultValues: { randomize_questions: true } });
   const [selectedIDs, setSelectedIDs] = useState<Set<string>>(new Set());
   const [createError, setCreateError] = useState('');
@@ -44,7 +45,10 @@ export default function CreateExamPage() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/exams', body),
-    onSuccess: () => navigate(`/educator/subjects/${subjectId}/exams`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['exams', subjectId] });
+      navigate(`/educator/subjects/${subjectId}/exams`);
+    },
     onError: (err: any) => setCreateError(err.response?.data?.error ?? 'Failed to create exam'),
   });
 

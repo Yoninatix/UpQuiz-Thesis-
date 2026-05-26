@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(curl -s -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"admin@examplatform.local\\\\\",\\\\\"password\\\\\":\\\\\"Admin@1234\\\\\"}\")",
-      "Bash(docker exec *)"
+      "Bash(docker exec *)",
+      "Bash(docker compose *)"
     ]
   }
 }

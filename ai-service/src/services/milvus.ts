@@ -92,8 +92,8 @@ export async function searchSimilarChunks(
       score: r.score,
     }));
   } catch (err: any) {
-    // Milvus throws non-standard errors for empty collections — treat as no results
-    console.warn('Milvus search warning:', err?.message ?? err);
+    // Milvus throws for empty collections; log clearly so it's diagnosable
+    console.error('[Milvus] searchSimilarChunks failed:', err?.message ?? err);
     return [];
   }
 }

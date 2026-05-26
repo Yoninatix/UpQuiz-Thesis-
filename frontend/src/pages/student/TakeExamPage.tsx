@@ -8,6 +8,7 @@ import { CheckCircle2, Clock, Save, Send, Loader2, BookOpen } from 'lucide-react
 interface Question {
   id: string; question_text: string; question_type: string;
   choices?: { key: string; text: string }[] | null;
+  points?: number;
 }
 interface Attempt { id: string; status: string; }
 
@@ -112,16 +113,29 @@ export default function TakeExamPage() {
                   ${answered ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                   {answered ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
                 </div>
-                <p className="font-medium text-slate-800 leading-relaxed">{q.question_text}</p>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-800 leading-relaxed">{q.question_text}</p>
+                  {q.points !== undefined && (
+                    <span className="inline-block mt-1 text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                      {q.points} {q.points === 1 ? 'pt' : 'pts'}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {q.question_type === 'multiple_choice' && q.choices && (
+              {q.question_type === 'multiple_choice' && Array.isArray(q.choices) && q.choices.length > 0 && (
                 <div className="space-y-2 ml-10">
-                  {q.choices.map(c => {
-                    const selected = answers[q.id] === c.key;
+                  {q.choices.map((c: any, ci) => {
+                    // Always derive key from index so duplicates/malformed data never break selection
+                    const choiceKey = String.fromCharCode(65 + ci);
+                    // Handle various LLM output shapes: {key,text}, {text}, plain string, {"A":"text"}
+                    const choiceText = typeof c === 'string'
+                      ? c
+                      : c?.text ?? c?.value ?? (Object.values(c ?? {}).find((v: any) => typeof v === 'string') as string) ?? '';
+                    const selected = answers[q.id] === choiceKey;
                     return (
                       <label
-                        key={c.key}
+                        key={choiceKey}
                         className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all duration-150
                           ${selected ? 'bg-primary-50 border-primary-300' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
                       >
@@ -130,12 +144,12 @@ export default function TakeExamPage() {
                           {selected && <div className="w-2 h-2 rounded-full bg-white" />}
                         </div>
                         <input
-                          type="radio" name={q.id} value={c.key}
-                          checked={selected} onChange={() => setAnswer(q.id, c.key)}
+                          type="radio" name={q.id} value={choiceKey}
+                          checked={selected} onChange={() => setAnswer(q.id, choiceKey)}
                           className="sr-only"
                         />
                         <span className="text-sm text-slate-700">
-                          <span className="font-semibold text-slate-500 mr-1">{c.key}.</span> {c.text}
+                          <span className="font-semibold text-slate-500 mr-1">{choiceKey}.</span> {choiceText}
                         </span>
                       </label>
                     );

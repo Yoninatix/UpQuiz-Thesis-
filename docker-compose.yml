@@ -87,14 +87,13 @@ services:
     restart: unless-stopped
     volumes:
       - ollama_data:/root/.ollama
-    # ── NVIDIA GPU: uncomment the block below and ensure nvidia-docker is installed
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - examnet
 
@@ -111,12 +110,17 @@ services:
         until curl -sf http://ollama:11434/ >/dev/null 2>&1; do
           sleep 3
         done
-        echo "Pulling model: $$OLLAMA_MODEL"
+        echo "Pulling generation model: $$OLLAMA_MODEL"
         curl -X POST http://ollama:11434/api/pull \
           -H "Content-Type: application/json" \
           -d "{\"name\":\"$$OLLAMA_MODEL\",\"stream\":false}"
         echo ""
-        echo "Model pull complete."
+        echo "Pulling embedding model: nomic-embed-text"
+        curl -X POST http://ollama:11434/api/pull \
+          -H "Content-Type: application/json" \
+          -d '{"name":"nomic-embed-text","stream":false}'
+        echo ""
+        echo "All models pulled."
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma:2b}
     depends_on:

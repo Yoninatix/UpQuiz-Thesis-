@@ -7,6 +7,7 @@ import { CheckCircle, Trash2, FileQuestion, Tag, Gauge } from 'lucide-react';
 interface Question {
   id: string; question_text: string; question_type: string;
   difficulty: string; topic_tag: string; correct_answer: string; is_approved: boolean;
+  points?: number;
 }
 
 const typeColors: Record<string, string> = {
@@ -103,6 +104,11 @@ export default function ReviewQuestionsPage() {
                     {q.topic_tag && (
                       <span className="badge bg-violet-50 text-violet-600">
                         <Tag className="w-3 h-3" /> {q.topic_tag}
+                      </span>
+                    )}
+                    {q.points !== undefined && (
+                      <span className="badge bg-primary-50 text-primary-600 font-semibold">
+                        {q.points} {q.points === 1 ? 'pt' : 'pts'}
                       </span>
                     )}
                     {q.is_approved && (

@@ -38,6 +38,25 @@ type ScoreResult struct {
 
 // ScoreAttempt auto-scores objective questions; skips essay.
 func (s *ScoringService) ScoreAttempt(ctx context.Context, attemptID, studentID uuid.UUID) (*ScoreResult, error) {
+	attempt, err := s.attemptRepo.FindByID(ctx, attemptID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build a question→points map from exam_questions (easy=1, medium=3, hard=5)
+	examQs, err := s.examRepo.GetQuestions(ctx, attempt.ExamID)
+	if err != nil {
+		return nil, err
+	}
+	pointsMap := make(map[uuid.UUID]float64, len(examQs))
+	for _, eq := range examQs {
+		if eq.Points != nil {
+			pointsMap[eq.ID] = *eq.Points
+		} else {
+			pointsMap[eq.ID] = 1.0
+		}
+	}
+
 	answers, err := s.attemptRepo.GetAnswers(ctx, attemptID)
 	if err != nil {
 		return nil, err
@@ -51,21 +70,20 @@ func (s *ScoringService) ScoreAttempt(ctx context.Context, attemptID, studentID 
 			continue
 		}
 
-		const pointsPerQ = 1.0
-		max += pointsPerQ
+		pts := pointsMap[ans.QuestionID]
+		if pts == 0 {
+			pts = 1.0
+		}
+		max += pts
 
 		if q.QuestionType == models.QTypeEssay {
 			// Essay: skip auto-scoring; educator marks manually
 			continue
 		}
 
-		isCorrect := s.checkAnswer(q, ans.AnswerText)
-		pts := 0.0
-		if isCorrect {
-			pts = pointsPerQ
+		if s.checkAnswer(q, ans.AnswerText) {
 			total += pts
 		}
-		_ = pts // stored via UpsertAnswer later
 	}
 
 	pct := 0.0

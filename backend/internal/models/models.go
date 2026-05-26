@@ -109,6 +109,7 @@ type GeneratedQuestion struct {
 	TopicTag      string          `json:"topic_tag"`
 	CorrectAnswer string          `json:"correct_answer"`
 	Choices       interface{}     `json:"choices,omitempty"` // JSONB
+	Points        *float64        `json:"points,omitempty"`  // from exam_questions join
 	IsApproved    bool            `json:"is_approved"`
 	IsDeleted     bool            `json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`

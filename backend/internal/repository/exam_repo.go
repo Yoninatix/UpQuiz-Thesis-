@@ -35,10 +35,34 @@ func (r *examRepo) Create(ctx context.Context, subjectID, createdBy uuid.UUID, t
 		return nil, fmt.Errorf("insert exam: %w", err)
 	}
 
+	// Fetch each question's difficulty to assign points
+	diffRows, err := tx.Query(ctx,
+		`SELECT id, difficulty FROM generated_questions WHERE id = ANY($1)`, questionIDs)
+	if err != nil {
+		return nil, fmt.Errorf("fetch question difficulties: %w", err)
+	}
+	diffMap := make(map[uuid.UUID]string)
+	for diffRows.Next() {
+		var id uuid.UUID
+		var diff string
+		if err := diffRows.Scan(&id, &diff); err != nil {
+			diffRows.Close()
+			return nil, err
+		}
+		diffMap[id] = diff
+	}
+	diffRows.Close()
+
+	pointsFor := map[string]float64{"easy": 1.0, "medium": 3.0, "hard": 5.0}
+
 	for pos, qID := range questionIDs {
+		pts := pointsFor[diffMap[qID]]
+		if pts == 0 {
+			pts = 1.0
+		}
 		_, err = tx.Exec(ctx,
-			`INSERT INTO exam_questions(exam_id,question_id,position) VALUES($1,$2,$3)`,
-			exam.ID, qID, pos+1)
+			`INSERT INTO exam_questions(exam_id,question_id,position,points) VALUES($1,$2,$3,$4)`,
+			exam.ID, qID, pos+1, pts)
 		if err != nil {
 			return nil, fmt.Errorf("insert exam_question: %w", err)
 		}
@@ -86,7 +110,7 @@ func (r *examRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status models
 
 func (r *examRepo) GetQuestions(ctx context.Context, examID uuid.UUID) ([]*models.GeneratedQuestion, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT gq.id,gq.question_text,gq.question_type,gq.difficulty,gq.topic_tag,gq.correct_answer,gq.choices
+		`SELECT gq.id,gq.question_text,gq.question_type,gq.difficulty,gq.topic_tag,gq.correct_answer,gq.choices,eq.points
 		 FROM generated_questions gq
 		 JOIN exam_questions eq ON eq.question_id=gq.id
 		 WHERE eq.exam_id=$1 ORDER BY eq.position`, examID)
@@ -98,7 +122,7 @@ func (r *examRepo) GetQuestions(ctx context.Context, examID uuid.UUID) ([]*model
 	for rows.Next() {
 		q := &models.GeneratedQuestion{}
 		if err := rows.Scan(&q.ID, &q.QuestionText, &q.QuestionType, &q.Difficulty,
-			&q.TopicTag, &q.CorrectAnswer, &q.Choices); err != nil {
+			&q.TopicTag, &q.CorrectAnswer, &q.Choices, &q.Points); err != nil {
 			return nil, err
 		}
 		qs = append(qs, q)
